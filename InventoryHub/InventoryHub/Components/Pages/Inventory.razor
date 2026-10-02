@@ -1,0 +1,102 @@
+@page "/inventory"
+@using InventoryHub.Models
+@using InventoryHub.Services
+@inject IInventoryService InventoryService
+@rendermode InteractiveServer
+
+<PageTitle>Inventory Management</PageTitle>
+
+<h3>Inventory Management Dashboard</h3>
+
+<div class="card mb-4 p-3">
+    <h5>Add New Inventory Item</h5>
+    <EditForm Model="newItem" OnValidSubmit="HandleAddItem">
+        <DataAnnotationsValidator />
+        <div class="row g-2">
+            <div class="col-md-3">
+                <InputText class="form-control" placeholder="Item Name" @bind-Value="newItem.Name" Required />
+            </div>
+            <div class="col-md-2">
+                <InputText class="form-control" placeholder="SKU" @bind-Value="newItem.SKU" Required />
+            </div>
+            <div class="col-md-2">
+                <InputNumber class="form-control" placeholder="Quantity" @bind-Value="newItem.Quantity" />
+            </div>
+            <div class="col-md-2">
+                <InputNumber class="form-control" placeholder="Price" @bind-Value="newItem.Price" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Add Item</button>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@if (isLoading)
+{
+    <p><em>Loading inventory data...</em></p>
+}
+else
+{
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Last Updated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in items)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Name</td>
+                    <td>@item.SKU</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.Price.ToString("C")</td>
+                    <td>@item.LastUpdated.ToLocalTime().ToString("g")</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteItem(item.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<InventoryItem> items = new();
+    private InventoryItem newItem = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInventory();
+    }
+
+    private async Task LoadInventory()
+    {
+        isLoading = true;
+        var result = await InventoryService.GetItemsAsync();
+        items = result.ToList();
+        isLoading = false;
+    }
+
+    private async Task HandleAddItem()
+    {
+        await InventoryService.AddItemAsync(newItem);
+        newItem = new InventoryItem();
+        await LoadInventory();
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        await InventoryService.DeleteItemAsync(id);
+        await LoadInventory();
+    }
+}
